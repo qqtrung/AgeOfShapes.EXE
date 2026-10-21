@@ -1,0 +1,10 @@
+Font 	Consolas  		                fonts/consolas.ttf
+
+Sound   SndWallElectric                 sounds/Skid.wav                 200
+Sound   SndWallFire                     sounds/FireBall.wav             200
+Sound   SndBuild                        sounds/Bump.wav                 400
+Sound   SndPickup                       sounds/Coin.wav                 30
+Sound   SndHit                          sounds/Kick.wav                 200
+Sound   SndDie                          sounds/Squish.wav               200
+Sound   SndShoot                        sounds/EnemyFire.wav            400
+Sound   SndExplode                      sounds/Explode.wav              300
