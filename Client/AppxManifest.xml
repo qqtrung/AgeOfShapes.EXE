@@ -8,7 +8,7 @@
   <Identity
       Name="makesimplegame.AgeOfShapes"
       Publisher="CN=D5ADE22B-4FAC-43A2-85E2-38496408AFA9"
-      Version="1.1.0.1"
+      Version="1.1.1.0"
       ProcessorArchitecture="x64" />
 
   <Properties>
