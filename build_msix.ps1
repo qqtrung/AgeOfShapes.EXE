@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 $workspaceRoot = $PSScriptRoot
 $clientDir = Join-Path $workspaceRoot "Client"
 $outputMsix = Join-Path $workspaceRoot "AgeOfShapes.msix"
-$outputVersionedMsix = Join-Path $workspaceRoot "AgeOfShapes_1.1.8.0_x64.msix"
+$outputVersionedMsix = Join-Path $workspaceRoot "AgeOfShapes_1.2.0.0_x64.msix"
 
 $makeAppx = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.28000.0\x64\makeappx.exe"
 $signTool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.28000.0\x64\signtool.exe"
