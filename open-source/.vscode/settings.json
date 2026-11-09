@@ -1,0 +1,16 @@
+{
+    "terminal.integrated.defaultProfile.windows": "Command Prompt",
+    "cmake.cmakePath": "C:/msys64/clang64/bin/cmake.exe",
+    "cmake.useCMakePresets": "always",
+    "clangd.path": "C:/msys64/clang64/bin/clangd.exe",
+    "clangd.arguments": [
+        "--clang-tidy",
+        "--background-index",
+        "--pch-storage=memory",
+        "--completion-style=detailed"
+    ],
+    "terminal.integrated.env.windows": {
+        "PATH": "C:/msys64/clang64/bin;${env:PATH}"
+    }
+}
+

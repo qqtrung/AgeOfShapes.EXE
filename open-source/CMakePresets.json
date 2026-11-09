@@ -1,0 +1,116 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "windows-release",
+            "displayName": "Windows (Clang Release)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "environment": {
+                "PATH": "C:/msys64/clang64/bin;$penv{PATH}"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_COMPILER": "C:/msys64/clang64/bin/clang++.exe",
+                "CMAKE_MAKE_PROGRAM": "C:/msys64/clang64/bin/ninja.exe",
+                "CMAKE_PREFIX_PATH": "C:/msys64/clang64"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "windows-debug",
+            "displayName": "Windows (Clang Debug)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "environment": {
+                "PATH": "C:/msys64/clang64/bin;$penv{PATH}"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_COMPILER": "C:/msys64/clang64/bin/clang++.exe",
+                "CMAKE_MAKE_PROGRAM": "C:/msys64/clang64/bin/ninja.exe",
+                "CMAKE_PREFIX_PATH": "C:/msys64/clang64"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "wsl-release",
+            "displayName": "WSL Linux (Clang Release)",
+            "generator": "Ninja",
+            "binaryDir": "/home/$env{USER}/build/${sourceDirName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+                "CMAKE_MAKE_PROGRAM": "/usr/bin/ninja",
+                "CMAKE_PREFIX_PATH": "/usr/local"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "wsl-debug",
+            "displayName": "WSL Linux (Clang Debug)",
+            "generator": "Ninja",
+            "binaryDir": "/home/$env{USER}/build/${sourceDirName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+                "CMAKE_MAKE_PROGRAM": "/usr/bin/ninja",
+                "CMAKE_PREFIX_PATH": "/usr/local"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "windows-relwithdebinfo",
+            "displayName": "Windows (Clang RelWithDebInfo)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "environment": {
+                "PATH": "C:/msys64/clang64/bin;$penv{PATH}"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_CXX_COMPILER": "C:/msys64/clang64/bin/clang++.exe",
+                "CMAKE_MAKE_PROGRAM": "C:/msys64/clang64/bin/ninja.exe",
+                "CMAKE_PREFIX_PATH": "C:/msys64/clang64"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "wsl-relwithdebinfo",
+            "displayName": "WSL Linux (Clang RelWithDebInfo)",
+            "generator": "Ninja",
+            "binaryDir": "/home/$env{USER}/build/${sourceDirName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+                "CMAKE_MAKE_PROGRAM": "/usr/bin/ninja",
+                "CMAKE_PREFIX_PATH": "/usr/local"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        }
+    ]
+}
