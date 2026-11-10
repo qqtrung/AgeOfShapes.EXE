@@ -63,6 +63,33 @@ struct CRectDragDrop : ComponentParent
     f32::Vec2 size{0, 0};
 };
 
+struct CVision : ComponentParent
+{
+    f32::Fix radius = 200;
+};
+
+struct CObstacle : ComponentParent
+{
+    bool isNavObstacle     = true;
+    bool blocksVision      = true;
+    bool blocksLineOfSight = true;
+};
+
+struct CMatchObjective : ComponentParent
+{
+    int priority = 1;
+};
+
+struct CNavBeacon : ComponentParent
+{
+    int beaconType = 0;
+};
+
+struct CNavTarget : ComponentParent
+{
+    int weight = 1;
+};
+
 struct ComponentChild : Component
 {
 };

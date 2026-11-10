@@ -32,13 +32,22 @@ void SystemMovement::update()
     for (int entityId : pool.viewIndex<CVelocity>())
     {
         const auto* mask = pool.getMask(entityId);
-        if (!pool.hasComponent<CBoundCircle>(mask) || !pool.hasComponent<CPosition>(mask) ||
-            !GameStateDetail::isEntityAlive(context, entityId))
+        if (!pool.hasComponent<CPosition>(mask) || !GameStateDetail::isEntityAlive(context, entityId))
         {
             continue;
         }
 
-        GameStateDetail::moveEntityWithObstacles(context, entityId);
+        if (pool.hasComponent<CBoundCircle>(mask))
+        {
+            GameStateDetail::moveEntityWithObstacles(context, entityId);
+        }
+        else
+        {
+            auto position     = pool.getComponent<CPosition>(entityId);
+            auto velocity     = pool.getComponent<CVelocity>(entityId);
+            position->prevPos = position->pos;
+            position->pos += velocity->vel;
+        }
     }
 }
 
@@ -374,8 +383,6 @@ void SystemProjectile::update()
         auto  position   = pool.getComponent<CPosition>(projectileId);
         auto  velocity   = pool.getComponent<CVelocity>(projectileId);
 
-        position->prevPos = position->pos;
-        position->pos += velocity->vel;
         projectile->lifeTime--;
 
         if (projectile->lifeTime <= 0 || position->pos.x < f32::Fix(0) || position->pos.x > context->mapWidth() ||
@@ -510,7 +517,17 @@ void SystemInit::init()
         baseData->attackCooldown = attackCooldown;
         baseData->damage         = damage;
 
-        context->mAdmin.add(context->createBundle(baseRect, baseData, basePos, baseHealth, baseTeam));
+        auto* baseVision   = context->alloc<CVision>();
+        baseVision->radius = f32::Fix(260);
+
+        auto* baseObstacle          = context->alloc<CObstacle>();
+        baseObstacle->isNavObstacle = true;
+        baseObstacle->blocksVision  = false;
+
+        auto* baseObjective = context->alloc<CMatchObjective>();
+
+        context->mAdmin.add(
+            context->createBundle(baseRect, baseData, basePos, baseHealth, baseTeam, baseVision, baseObstacle, baseObjective));
     };
 
     if (!isPvP || playerCount <= 1)
@@ -700,11 +717,11 @@ void SystemMatchEnd::update()
     auto& pool = context->mAdmin.mPool;
 
     std::map<int, int> teamBaseCounts;
-    for (const int baseId : pool.viewIndex<CBase>())
+    for (const int objId : pool.viewIndex<CMatchObjective>())
     {
-        if (!GameStateDetail::isEntityAlive(context, baseId))
+        if (!GameStateDetail::isEntityAlive(context, objId))
             continue;
-        int tId = GameStateDetail::getEntityTeam(pool, baseId);
+        int tId = GameStateDetail::getEntityTeam(pool, objId);
         teamBaseCounts[tId]++;
     }
 
@@ -847,10 +864,10 @@ void SystemNavigationField::computeGrid()
 
         const auto* dragMask     = context->mAdmin.mPool.getMask(id);
         bool        isDesignated = false;
-        if (context->mAdmin.mPool.hasComponent<CWall>(dragMask))
+        if (context->mAdmin.mPool.hasComponent<CObstacle>(dragMask))
         {
-            auto wall = context->mAdmin.mPool.getComponent<CWall>(id);
-            if (wall->kind == WallKind::DesignatedPoint)
+            const auto obstacle = context->mAdmin.mPool.getComponent<CObstacle>(id);
+            if (!obstacle->isNavObstacle)
             {
                 isDesignated = true;
             }
@@ -928,8 +945,7 @@ void SystemNavigationField::updateVisionGridForTeam(int teamId, Grid<char>& targ
     auto& pool   = context->mAdmin.mPool;
     auto& lights = context->mNav.mScratchLights;
     lights.clear();
-    lights.reserve(pool.viewIndex<CPlayer>().size() + pool.viewIndex<CUnit>().size() + pool.viewIndex<CBase>().size() +
-                   pool.viewIndex<CWall>().size());
+    lights.reserve(pool.viewIndex<CVision>().size());
 
     auto addLight = [&](f32::Vec2 pos, f32::Fix radius, int ignoreWallId = -1)
     {
@@ -944,61 +960,39 @@ void SystemNavigationField::updateVisionGridForTeam(int teamId, Grid<char>& targ
                           .ignoreWallId        = ignoreWallId});
     };
 
-    for (int playerId : pool.viewIndex<CPlayer>())
+    for (int entityId : pool.viewIndex<CVision>())
     {
-        if (!GameStateDetail::isEntityAlive(context, playerId))
+        if (!GameStateDetail::isEntityAlive(context, entityId))
             continue;
-        if (GameStateDetail::getEntityTeam(pool, playerId) != teamId)
-            continue;
-        const auto* playerMask = pool.getMask(playerId);
-        if (!pool.hasComponent<CPosition>(playerMask))
-            continue;
-        const auto pos = pool.getComponent<CPosition>(playerId);
-        addLight(pos->pos, kVisionRadiusUnit);
-    }
-
-    for (int unitId : pool.viewIndex<CUnit>())
-    {
-        if (!GameStateDetail::isEntityAlive(context, unitId))
-            continue;
-        if (GameStateDetail::getEntityTeam(pool, unitId) != teamId)
-            continue;
-        const auto* unitMask = pool.getMask(unitId);
-        if (!pool.hasComponent<CPosition>(unitMask))
-            continue;
-        const auto pos = pool.getComponent<CPosition>(unitId);
-        addLight(pos->pos, kVisionRadiusUnit);
-    }
-
-    for (int baseId : pool.viewIndex<CBase>())
-    {
-        if (!GameStateDetail::isEntityAlive(context, baseId))
-            continue;
-        if (GameStateDetail::getEntityTeam(pool, baseId) != teamId)
-            continue;
-        const auto* baseMask = pool.getMask(baseId);
-        if (!pool.hasComponent<CPosition>(baseMask))
-            continue;
-        const auto pos = pool.getComponent<CPosition>(baseId);
-        addLight(pos->pos, kVisionRadiusBase);
-    }
-
-    for (int wallId : pool.viewIndex<CWall>())
-    {
-        if (!GameStateDetail::isEntityAlive(context, wallId))
-            continue;
-        const auto wall = pool.getComponent<CWall>(wallId);
-        if (wall->kind != WallKind::Defensive)
-            continue;
-        if (GameStateDetail::getEntityTeam(pool, wallId) != teamId)
-            continue;
-        const auto* wallMask = pool.getMask(wallId);
-        if (!pool.hasComponent<CRectDragDrop>(wallMask))
+        if (GameStateDetail::getEntityTeam(pool, entityId) != teamId)
             continue;
 
-        const auto rect   = pool.getComponent<CRectDragDrop>(wallId);
-        const auto center = rect->pos + rect->size * f32::Fix(1) / 2;
-        addLight(center, kVisionRadiusUnit, wallId);
+        const auto  vision = pool.getComponent<CVision>(entityId);
+        const auto* mask   = pool.getMask(entityId);
+
+        f32::Vec2 center{};
+        int       ignoreWallId = -1;
+
+        if (pool.hasComponent<CPosition>(mask))
+        {
+            center = pool.getComponent<CPosition>(entityId)->pos;
+            if (pool.hasComponent<CRectDragDrop>(mask))
+            {
+                ignoreWallId = entityId;
+            }
+        }
+        else if (pool.hasComponent<CRectDragDrop>(mask))
+        {
+            const auto rect = pool.getComponent<CRectDragDrop>(entityId);
+            center          = rect->pos + rect->size * f32::Fix(1) / 2;
+            ignoreWallId    = entityId;
+        }
+        else
+        {
+            continue;
+        }
+
+        addLight(center, vision->radius, ignoreWallId);
     }
 
     if (lights.empty())
@@ -1075,11 +1069,11 @@ void SystemNavigationField::updateVisionGridForTeam(int teamId, Grid<char>& targ
                 continue;
 
             const auto* mask = pool.getMask(id);
-            if (!pool.hasComponent<CWall>(mask))
+            if (!pool.hasComponent<CObstacle>(mask))
                 continue;
 
-            const auto wall = pool.getComponent<CWall>(id);
-            if (wall->kind == WallKind::Defensive)
+            const auto obstacle = pool.getComponent<CObstacle>(id);
+            if (!obstacle->blocksVision)
                 continue;
 
             const auto& rect = dragRects[i];
@@ -1535,18 +1529,18 @@ void SystemNavigationField::updateTeamField(int teamId)
     auto& targets = context->mNav.mScratchTargets;
     targets.clear();
 
-    for (int baseId : pool.viewIndex<CBase>())
+    for (int objId : pool.viewIndex<CMatchObjective>())
     {
-        if (GameStateDetail::getEntityTeam(pool, baseId) != teamId && GameStateDetail::isEntityAlive(context, baseId))
+        if (GameStateDetail::getEntityTeam(pool, objId) != teamId && GameStateDetail::isEntityAlive(context, objId))
         {
-            targets.push_back(baseId);
+            targets.push_back(objId);
         }
     }
 
     if (context->getGameMode() == GameState::GameMode::PvP || teamId == 0)
     {
         const auto& visionGrid = getVisionGrid(teamId);
-        for (int opponentId : pool.viewIndex<CUnit>())
+        for (int opponentId : pool.viewIndex<CNavTarget>())
         {
             if (GameStateDetail::getEntityTeam(pool, opponentId) == teamId ||
                 !GameStateDetail::isEntityAlive(context, opponentId))
@@ -1588,12 +1582,9 @@ void SystemNavigationField::updateDesignatedFields()
     for (int t = 0; t <= maxTeamId; ++t)
     {
         dpTargets.clear();
-        for (int dpId : pool.viewIndex<CWall>())
+        for (int dpId : pool.viewIndex<CNavBeacon>())
         {
             if (!GameStateDetail::isEntityAlive(context, dpId))
-                continue;
-            const auto wall = pool.getComponent<CWall>(dpId);
-            if (wall->kind != WallKind::DesignatedPoint)
                 continue;
             const int dpTeam = GameStateDetail::getEntityTeam(pool, dpId);
             if (dpTeam == t || (dpTeam < 0 && t == 0))
@@ -1711,10 +1702,10 @@ bool SystemNavigationField::hasLineOfSight(f32::Vec2 start, f32::Vec2 end, int i
             {
                 lastCheckedId    = entityID;
                 const auto* mask = pool.getMask(entityID);
-                if (pool.hasComponent<CWall>(mask))
+                if (pool.hasComponent<CObstacle>(mask))
                 {
-                    const auto wall = pool.getComponent<CWall>(entityID);
-                    if (wall->kind == WallKind::Defensive || wall->kind == WallKind::DesignatedPoint)
+                    const auto obstacle = pool.getComponent<CObstacle>(entityID);
+                    if (!obstacle->blocksLineOfSight)
                     {
                         return true;
                     }

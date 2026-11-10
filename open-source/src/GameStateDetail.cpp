@@ -346,17 +346,43 @@ void placePlayerWall(GameState* gameState, f32::Vec2 center, WallKind kind, int 
     teamComp->teamId   = teamId;
     teamComp->playerId = playerId;
 
+    auto* obstacle = gameState->alloc<CObstacle>();
+    if (kind == WallKind::DesignatedPoint)
+    {
+        obstacle->isNavObstacle     = false;
+        obstacle->blocksVision      = false;
+        obstacle->blocksLineOfSight = false;
+    }
+    else if (kind == WallKind::Defensive)
+    {
+        obstacle->isNavObstacle     = true;
+        obstacle->blocksVision      = false;
+        obstacle->blocksLineOfSight = false;
+    }
+    else
+    {
+        obstacle->isNavObstacle = true;
+        obstacle->blocksVision  = true;
+    }
+
     if (kind == WallKind::DesignatedPoint)
     {
         auto* pos    = gameState->alloc<CPosition>();
         pos->pos     = center;
         pos->posInit = center;
         pos->prevPos = center;
-        gameState->mAdmin.add(gameState->createBundle(wallRect, wallData, teamComp, pos));
+        auto* beacon = gameState->alloc<CNavBeacon>();
+        gameState->mAdmin.add(gameState->createBundle(wallRect, wallData, teamComp, pos, obstacle, beacon));
+    }
+    else if (kind == WallKind::Defensive)
+    {
+        auto* vision   = gameState->alloc<CVision>();
+        vision->radius = f32::Fix(200);
+        gameState->mAdmin.add(gameState->createBundle(wallRect, wallData, teamComp, obstacle, vision));
     }
     else
     {
-        gameState->mAdmin.add(gameState->createBundle(wallRect, wallData, teamComp));
+        gameState->mAdmin.add(gameState->createBundle(wallRect, wallData, teamComp, obstacle));
     }
 
     consumeWallStock(gameState, kind, playerId);
@@ -903,6 +929,25 @@ IComponentBundle* createWallBundle(GameState*       gameState,
     wallRect->size = size;
     *wallData      = createWallData(kind, playerPlaced);
 
+    auto* obstacle = gameState->alloc<CObstacle>();
+    if (kind == WallKind::DesignatedPoint)
+    {
+        obstacle->isNavObstacle     = false;
+        obstacle->blocksVision      = false;
+        obstacle->blocksLineOfSight = false;
+    }
+    else if (kind == WallKind::Defensive)
+    {
+        obstacle->isNavObstacle     = true;
+        obstacle->blocksVision      = false;
+        obstacle->blocksLineOfSight = false;
+    }
+    else
+    {
+        obstacle->isNavObstacle = true;
+        obstacle->blocksVision  = true;
+    }
+
     if (kind != WallKind::Rock && teamId >= 0)
     {
         auto* teamComp     = gameState->alloc<CTeam>();
@@ -916,10 +961,17 @@ IComponentBundle* createWallBundle(GameState*       gameState,
             wallPos->pos      = center;
             wallPos->posInit  = center;
             wallPos->prevPos  = center;
-            return gameState->createBundle(wallRect, wallData, teamComp, wallPos);
+            auto* beacon      = gameState->alloc<CNavBeacon>();
+            return gameState->createBundle(wallRect, wallData, teamComp, wallPos, obstacle, beacon);
+        }
+        else if (kind == WallKind::Defensive)
+        {
+            auto* vision   = gameState->alloc<CVision>();
+            vision->radius = f32::Fix(200);
+            return gameState->createBundle(wallRect, wallData, teamComp, obstacle, vision);
         }
 
-        return gameState->createBundle(wallRect, wallData, teamComp);
+        return gameState->createBundle(wallRect, wallData, teamComp, obstacle);
     }
 
     if (kind == WallKind::DesignatedPoint)
@@ -929,10 +981,11 @@ IComponentBundle* createWallBundle(GameState*       gameState,
         wallPos->pos      = center;
         wallPos->posInit  = center;
         wallPos->prevPos  = center;
-        return gameState->createBundle(wallRect, wallData, wallPos);
+        auto* beacon      = gameState->alloc<CNavBeacon>();
+        return gameState->createBundle(wallRect, wallData, wallPos, obstacle, beacon);
     }
 
-    return gameState->createBundle(wallRect, wallData);
+    return gameState->createBundle(wallRect, wallData, obstacle);
 }
 
 IComponentBundle* createPickupBundle(GameState* gameState, const f32::Vec2& position)
@@ -1999,7 +2052,12 @@ void spawnAgent(GameState* gameState, const f32::Vec2& spawnPosition, UnitClass 
     unit->stance     = CombatStance::Attack;
     unit->isSelected = false;
 
-    gameState->mAdmin.add(gameState->createBundle(bound, unit, position, velocity, health, team));
+    auto* vision   = gameState->alloc<CVision>();
+    vision->radius = f32::Fix(200);
+
+    auto* navTarget = gameState->alloc<CNavTarget>();
+
+    gameState->mAdmin.add(gameState->createBundle(bound, unit, position, velocity, health, team, vision, navTarget));
 }
 
 void queueTeamPopulation(GameState* gameState, int count, int teamId)
@@ -2656,7 +2714,10 @@ void spawnPlayer(GameState* gameState)
         position->pos     = pos;
         position->prevPos = pos;
 
-        gameState->mAdmin.add(gameState->createBundle(player, bound, position, velocity, health, team));
+        auto* vision   = gameState->alloc<CVision>();
+        vision->radius = f32::Fix(200);
+
+        gameState->mAdmin.add(gameState->createBundle(player, bound, position, velocity, health, team, vision));
     }
 }
 

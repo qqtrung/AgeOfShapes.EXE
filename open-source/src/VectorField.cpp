@@ -48,8 +48,7 @@ void VectorField::computeDirection(const std::vector<int>& idAgents, MemoryPool&
             continue;
         }
 
-        const bool isDesignatedPoint = pool.hasComponent<CWall>(mask) &&
-                                       (pool.getComponent<CWall>(idAgent)->kind == WallKind::DesignatedPoint);
+        const bool isDesignatedPoint = pool.hasComponent<CNavBeacon>(mask);
         if (pool.hasComponent<CRectDragDrop>(mask) && !isDesignatedPoint)
         {
             bool       seeded = false;
